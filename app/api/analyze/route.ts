@@ -1,25 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeProfile } from '@/lib/claude';
 
-// ── Extract LinkedIn username from URL ────────────────────────────────────────
-function extractUsername(linkedinUrl: string): string | null {
-  const match = linkedinUrl.match(/linkedin\.com\/in\/([^/?#]+)/);
-  return match ? match[1].replace(/\/$/, '') : null;
-}
-
-// ── LinkdAPI profile fetch ────────────────────────────────────────────────────
+// ── EnrichLayer profile fetch ─────────────────────────────────────────────────
 async function fetchLinkedInProfile(linkedinUrl: string): Promise<string> {
-  const apiKey = process.env.LINKDAPI_KEY;
-  if (!apiKey) throw new Error('LINKDAPI_KEY is not set');
+  const apiKey = process.env.ENRICHLAYER_API_KEY;
+  if (!apiKey) throw new Error('ENRICHLAYER_API_KEY is not set');
 
-  const username = extractUsername(linkedinUrl);
-  if (!username) throw new Error('Could not extract LinkedIn username from URL.');
-
-  const endpoint = `https://linkdapi.com/api/v1/profile/full?username=${encodeURIComponent(username)}`;
+  const endpoint = `https://enrichlayer.com/api/v2/profile?profile_url=${encodeURIComponent(linkedinUrl)}`;
 
   const res = await fetch(endpoint, {
     headers: {
-      'X-linkdapi-apikey': apiKey,
+      'Authorization': `Bearer ${apiKey}`,
       'Accept': 'application/json',
     },
     next: { revalidate: 0 },
@@ -28,79 +19,102 @@ async function fetchLinkedInProfile(linkedinUrl: string): Promise<string> {
   if (!res.ok) {
     let body = '';
     try { body = await res.text(); } catch {}
-    console.error(`[linkdapi] ${res.status} — ${body}`);
+    console.error(`[enrichlayer] ${res.status} — ${body}`);
     switch (res.status) {
-      case 401: throw new Error('LinkdAPI key is invalid. Check your LINKDAPI_KEY.');
-      case 403: throw new Error('LinkdAPI account not authorised. Check your plan at linkdapi.com.');
+      case 401: throw new Error('EnrichLayer API key is invalid. Check your ENRICHLAYER_API_KEY.');
+      case 403: throw new Error('EnrichLayer account not authorised. Check your plan at enrichlayer.com.');
       case 404: throw new Error('LinkedIn profile not found. Make sure the URL is correct and the profile is public.');
-      case 429: throw new Error('LinkdAPI rate limit hit. Please wait a moment and try again.');
+      case 429: throw new Error('EnrichLayer rate limit hit. Please wait a moment and try again.');
       default:  throw new Error(`Failed to fetch LinkedIn profile (${res.status}).`);
     }
   }
 
-  const json = await res.json();
+  const p = await res.json() as Record<string, unknown>;
 
-  // LinkdAPI wraps data in a { success, data } envelope
-  const p = (json.data ?? json) as Record<string, unknown>;
-
-  if (!p || !p.firstName) {
-    console.error('[linkdapi] unexpected response shape:', JSON.stringify(json).slice(0, 300));
+  if (!p || !p.first_name) {
+    console.error('[enrichlayer] unexpected response shape:', JSON.stringify(p).slice(0, 300));
     throw new Error('LinkedIn profile returned empty data. The profile may be private.');
   }
 
-  console.log(`[linkdapi] fetched: ${p.firstName} ${p.lastName} — ${p.headline}`);
-  return formatLinkdAPIProfile(p);
+  console.log(`[enrichlayer] fetched: ${p.full_name} — ${p.headline}`);
+  return formatEnrichLayerProfile(p);
 }
 
-// ── Convert LinkdAPI response → readable text for Claude ─────────────────────
-function formatLinkdAPIProfile(p: Record<string, unknown>): string {
+// ── Convert EnrichLayer response → readable text for Claude ──────────────────
+function formatEnrichLayerProfile(p: Record<string, unknown>): string {
   const lines: string[] = [];
 
   // Basic info
-  const name = [p.firstName, p.lastName].filter(Boolean).join(' ');
-  if (name) lines.push(`Name: ${name}`);
-  if (p.headline) lines.push(`Headline: ${p.headline}`);
+  if (p.full_name)     lines.push(`Name: ${p.full_name}`);
+  if (p.headline)      lines.push(`Headline: ${p.headline}`);
+  if (p.occupation)    lines.push(`Current role: ${p.occupation}`);
+  if (p.location_str)  lines.push(`Location: ${p.location_str}`);
+  if (p.industry)      lines.push(`Industry: ${p.industry}`);
+  if (p.follower_count) lines.push(`LinkedIn followers: ${p.follower_count}`);
+  if (p.connections)   lines.push(`Connections: ${p.connections}`);
 
-  // Location
-  const geo = p.geo as Record<string, unknown> | undefined;
-  if (geo?.full) lines.push(`Location: ${geo.full}`);
+  // Summary / About (richest signal)
+  if (p.summary) {
+    const clean = String(p.summary).replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
+    lines.push('', 'About:', clean);
+  }
 
-  // Industry
-  const industry = p.industry as Record<string, unknown> | undefined;
-  if (industry?.name) lines.push(`Industry: ${industry.name}`);
-
-  // Follower/connection counts (signal of seniority/influence)
-  if (p.followerCount) lines.push(`LinkedIn followers: ${p.followerCount}`);
-  if (p.connectionsCount) lines.push(`Connections: ${p.connectionsCount}`);
-
-  // About / summary (the richest signal)
-  if (p.summary) lines.push('', 'About:', String(p.summary));
-
-  // Current positions
-  const currentPositions = p.currentPositions as Array<Record<string, unknown>> | undefined;
-  if (currentPositions?.length) {
-    lines.push('', 'Current Role(s):');
-    for (const pos of currentPositions) {
-      const company = (pos.company as Record<string, unknown>)?.name ?? pos.companyName ?? '';
-      lines.push(`- ${pos.title ?? pos.role ?? ''} at ${company}`);
+  // Work experience
+  const experiences = p.experiences as Array<Record<string, unknown>> | undefined;
+  if (experiences?.length) {
+    lines.push('', 'Experience:');
+    for (const exp of experiences.slice(0, 8)) {
+      const company = String(exp.company ?? '');
+      const title   = String(exp.title ?? '');
+      const start   = (exp.starts_at as Record<string, unknown>)?.year ?? '';
+      const end     = exp.ends_at ? (exp.ends_at as Record<string, unknown>)?.year ?? 'present' : 'present';
+      lines.push(`- ${title} at ${company} (${start}–${end})`);
+      if (exp.description) {
+        const desc = String(exp.description).replace(/<[^>]+>/g, '').slice(0, 200);
+        lines.push(`  ${desc}`);
+      }
     }
   }
 
-  // Skills
-  const skills = p.skills as Array<Record<string, unknown>> | undefined;
-  if (skills?.length) {
-    const skillNames = skills.slice(0, 25).map(s => String(s.name ?? s));
-    lines.push('', `Skills: ${skillNames.join(', ')}`);
+  // Education
+  const education = p.education as Array<Record<string, unknown>> | undefined;
+  if (education?.length) {
+    lines.push('', 'Education:');
+    for (const edu of education.slice(0, 3)) {
+      lines.push(`- ${edu.degree_name ?? ''} ${edu.field_of_study ? 'in ' + edu.field_of_study : ''} at ${edu.school ?? ''}`);
+    }
   }
 
   // Certifications
   const certs = p.certifications as Array<Record<string, unknown>> | undefined;
   if (certs?.length) {
     lines.push('', 'Certifications:');
-    for (const cert of certs.slice(0, 6)) {
+    for (const cert of certs.slice(0, 8)) {
       lines.push(`- ${cert.name ?? ''} (${cert.authority ?? ''})`);
     }
   }
+
+  // Published articles (signals thought leadership)
+  const articles = p.articles as Array<Record<string, unknown>> | undefined;
+  if (articles?.length) {
+    lines.push('', `Published articles: ${articles.length} LinkedIn articles`);
+    for (const art of articles.slice(0, 4)) {
+      lines.push(`- "${art.title ?? ''}"`);
+    }
+  }
+
+  // Honours & awards
+  const awards = p.accomplishment_honors_awards as Array<Record<string, unknown>> | undefined;
+  if (awards?.length) {
+    lines.push('', 'Honours & Awards:');
+    for (const a of awards.slice(0, 5)) {
+      lines.push(`- ${a.title ?? ''} (${a.issuer ?? ''})`);
+    }
+  }
+
+  // Languages
+  const langs = p.languages as string[] | undefined;
+  if (langs?.length) lines.push('', `Languages: ${langs.join(', ')}`);
 
   return lines.join('\n');
 }
@@ -118,7 +132,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1 · Fetch profile via LinkdAPI
+    // 1 · Fetch profile via EnrichLayer
     let profileText: string;
     try {
       profileText = await fetchLinkedInProfile(linkedinUrl);
