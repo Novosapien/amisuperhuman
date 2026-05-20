@@ -14,7 +14,7 @@ export default function LandingScreen({ onSubmit, initialName = '' }: Props) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!linkedinUrl.trim() || !linkedinUrl.includes('linkedin.com/in/')) {
-      setError('Please enter a valid LinkedIn profile URL — e.g. linkedin.com/in/yourname');
+      setError('Please enter a valid LinkedIn profile URL, e.g. linkedin.com/in/yourname');
       return;
     }
     setError('');
@@ -27,7 +27,7 @@ export default function LandingScreen({ onSubmit, initialName = '' }: Props) {
       <div className="grid-lines" />
       <nav>
         <div className="nav-logo">ЯEBEL TECHNOLOGIST</div>
-        <div className="nav-badge">Superhuman Index — 2026</div>
+        <div className="nav-badge">Superhuman Index 2026</div>
       </nav>
 
       {/* Hero */}
@@ -55,7 +55,7 @@ export default function LandingScreen({ onSubmit, initialName = '' }: Props) {
           <div className="testimonials-label">What Superhumans say</div>
           <div className="testimonials-grid">
             {[
-              { q: "I used to spend three days producing a campaign. Now I do it in three hours with Claude. That\'s not productivity — that\'s a different job.", name: "Sarah M.", role: "Head of Marketing, Series B SaaS" },
+              { q: "I used to spend three days producing a campaign. Now I do it in three hours with Claude. That\'s not productivity. That\'s a different job.", name: "Sarah M.", role: "Head of Marketing, Series B SaaS" },
               { q: "My score was 61. Within six weeks of following the action plan, I was running five prospect sequences simultaneously while attending fewer meetings.", name: "James T.", role: "Enterprise AE, FinTech" },
               { q: "I was skeptical. An 8-minute profile analysis that actually understood my role? The recommendations were more specific than any consultant I\'ve paid.", name: "Priya K.", role: "VP Operations, Scale-up" },
             ].map((t, i) => (
@@ -97,14 +97,14 @@ export default function LandingScreen({ onSubmit, initialName = '' }: Props) {
           <h2>Apply for the <span className="accent">Superhuman</span> Role</h2>
           <p>
             Drop in your LinkedIn URL. Our Superhuman Advisor analyses your full profile
-            automatically — role, seniority, skills, industry — and scores your AI readiness
+            automatically: role, seniority, skills, industry, and scores your AI readiness
             across five dimensions with a personalised action plan built for your exact job.
           </p>
           <ul className="requirements">
             {[
               ['One URL, 60 seconds', 'We fetch and analyse your profile automatically. No copy-pasting.'],
               ['Scores 5 dimensions', 'Role risk, AI awareness, transferability, seniority, industry velocity.'],
-              ['Role-specific action plan', 'Not generic advice — specific tools for your exact job.'],
+              ['Role-specific action plan', 'Not generic advice. Specific tools for your exact job.'],
               ['100% positive framing', 'Your score tells you how far you\'ve come, not how far to go.'],
             ].map(([strong, rest], i) => (
               <li key={i}>
@@ -117,7 +117,7 @@ export default function LandingScreen({ onSubmit, initialName = '' }: Props) {
 
         <form className="application-form" onSubmit={handleSubmit}>
           <div className="form-job-badge">Position Open</div>
-          <div className="form-title">Superhuman — [Your Role]</div>
+          <div className="form-title">Superhuman: [Your Role]</div>
           <div className="form-subtitle">RebelTechnologist · Remote · Starts immediately</div>
 
           <div className="form-group">
