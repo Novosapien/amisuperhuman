@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
 
     if (!linkedinUrl || !linkedinUrl.includes('linkedin.com/in/')) {
       return NextResponse.json(
-        { error: 'Please provide a valid LinkedIn profile URL — e.g. https://www.linkedin.com/in/yourname' },
+        { error: 'Please provide a valid LinkedIn profile URL, e.g. https://www.linkedin.com/in/yourname' },
         { status: 400 }
       );
     }

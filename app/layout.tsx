@@ -4,7 +4,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Am I Superhuman? | RebelTechnologist Superhuman Index',
-  description: 'Paste your LinkedIn profile. Get your Superhuman Score across 5 AI-readiness dimensions. Find out exactly which tools will multiply your output — role by role, step by step.',
+  description: 'Paste your LinkedIn profile. Get your Superhuman Score across 5 AI-readiness dimensions. Find out exactly which tools will multiply your output, role by role, step by step.',
   openGraph: {
     title: 'Am I Superhuman? | RebelTechnologist',
     description: 'Grade your LinkedIn profile against the Superhuman Index. Are you ready for the AI transition?',

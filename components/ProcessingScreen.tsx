@@ -134,7 +134,7 @@ export default function ProcessingScreen() {
           <div className="mac-dot red" />
           <div className="mac-dot yellow" />
           <div className="mac-dot green" />
-          <div className="mac-title">superhuman_advisor.py — running analysis</div>
+          <div className="mac-title">superhuman_advisor.py: running analysis</div>
         </div>
         <div className="mac-screen">
           <div id="code-output" ref={outputRef} />

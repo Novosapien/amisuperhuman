@@ -9,13 +9,20 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, linkedinUrl, profileText, analysis } = body as {
+    const { name, email, linkedinUrl, profileText, analysis, _hp } = body as {
       name: string;
       email: string;
       linkedinUrl: string;
       profileText: string;
       analysis: SuperhumanAnalysis;
+      _hp?: string;
     };
+
+    // Honeypot check — if bot filled the hidden field, silently succeed
+    if (_hp && _hp.trim().length > 0) {
+      console.log('[send-report] Honeypot triggered — discarding bot submission');
+      return NextResponse.json({ success: true });
+    }
 
     const supabase = getServiceClient();
 
@@ -76,7 +83,7 @@ export async function POST(request: NextRequest) {
     const { error: emailErr } = await resend.emails.send({
       from: 'Superhuman Index <hello@amisuperhuman.com>',
       to: email,
-      subject: `Your Superhuman Score: ${analysis.overall_score}/100 — ${analysis.percentile_label}`,
+      subject: `Your Superhuman Score: ${analysis.overall_score}/100: ${analysis.percentile_label}`,
       html: buildEmail(name, analysis),
       ...(pdfBuffer && {
         attachments: [{
@@ -148,7 +155,7 @@ function buildEmail(name: string, a: SuperhumanAnalysis): string {
       <div style="font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#47F061;margin-bottom:16px;">YOUR 3-PHASE ACTION PLAN</div>
       ${a.action_plan.map(step => `
       <div style="margin-bottom:14px;padding:16px 20px;background:#1C0A33;border:1px solid rgba(255,255,255,.07);border-radius:6px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#47F061;margin-bottom:4px;">STEP ${step.step} — ${step.time_frame}</div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#47F061;margin-bottom:4px;">STEP ${step.step}: ${step.time_frame}</div>
         <div style="font-size:14px;font-weight:700;color:#F5F5F0;margin-bottom:6px;">${step.title}</div>
         <div style="font-size:12px;line-height:1.6;color:rgba(255,255,255,.55);">${step.body}</div>
       </div>`).join('')}

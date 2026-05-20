@@ -13,42 +13,42 @@ interface Props {
 const DIM_CONFIG = [
   {
     key: 'task_composition' as const,
-    label: 'D1 — Task Composition',
+    label: 'D1: Task Composition',
     shortLabel: 'Task Composition',
     max: 25,
     improve: 'Rewrite role descriptions to highlight strategic and cross-functional work.',
   },
   {
     key: 'ai_signal_strength' as const,
-    label: 'D2 — AI Signal Strength',
+    label: 'D2: AI Signal Strength',
     shortLabel: 'AI Signal Strength',
     max: 25,
     improve: 'Name AI tools in your About section. Describe an agentic workflow to unlock the +5 Agentic Bonus.',
   },
   {
     key: 'skill_transferability' as const,
-    label: 'D3 — Skill Transferability',
+    label: 'D3: Skill Transferability',
     shortLabel: 'Skill Transferability',
     max: 20,
     improve: 'Add cross-functional projects, certifications, or active learning signals.',
   },
   {
     key: 'seniority_leverage' as const,
-    label: 'D4 — Seniority Leverage',
+    label: 'D4: Seniority Leverage',
     shortLabel: 'Seniority Leverage',
     max: 15,
     improve: 'Show direct work outputs in your profile, not just delegation.',
   },
   {
     key: 'industry_velocity' as const,
-    label: 'D5 — Industry AI Velocity',
+    label: 'D5: Industry AI Velocity',
     shortLabel: 'Industry Velocity',
     max: 10,
-    improve: 'Fixed to your industry — focus on other dimensions.',
+    improve: 'Fixed to your industry. Focus on other dimensions.',
   },
   {
     key: 'career_momentum' as const,
-    label: 'D6 — Career Momentum',
+    label: 'D6: Career Momentum',
     shortLabel: 'Career Momentum',
     max: 5,
     improve: 'Add recent certs, promotions, or thought leadership content.',
@@ -63,9 +63,9 @@ const SCORE_BAND_COPY: Record<string, { headline: string; sub: string }> = {
 };
 
 const TIER_CONFIG = {
-  mundane:  { label: 'Tier 1 — Mundane',  color: 'rgba(255,255,255,0.5)', stripe: 'rgba(255,255,255,0.2)' },
-  mediocre: { label: 'Tier 2 — Mediocre', color: 'var(--amber)',          stripe: 'var(--amber)' },
-  core:     { label: 'Tier 3 — Core',     color: 'var(--green)',          stripe: 'var(--green)' },
+  mundane:  { label: 'Tier 1: Mundane',  color: 'rgba(255,255,255,0.5)', stripe: 'rgba(255,255,255,0.2)' },
+  mediocre: { label: 'Tier 2: Mediocre', color: 'var(--amber)',          stripe: 'var(--amber)' },
+  core:     { label: 'Tier 3: Core',     color: 'var(--green)',          stripe: 'var(--green)' },
 };
 
 export default function ReportScreen({ analysis, formData, onGradeColleague }: Props) {
@@ -76,6 +76,7 @@ export default function ReportScreen({ analysis, formData, onGradeColleague }: P
   const [sending,   setSending]   = useState(false);
   const [sent,      setSent]      = useState(false);
   const [sendError, setSendError] = useState('');
+  const [formLoadTime] = useState(() => Date.now());
 
   useEffect(() => {
     // Animate score ring
@@ -101,6 +102,11 @@ export default function ReportScreen({ analysis, formData, onGradeColleague }: P
   async function handleSendReport(e: React.FormEvent) {
     e.preventDefault();
     if (!emailAddr.includes('@')) return;
+    // Honeypot check: if bot filled the hidden field, silently succeed without sending
+    const honey = (e.target as HTMLFormElement).querySelector<HTMLInputElement>('input[name="_hp_website"]')?.value;
+    if (honey) { setSent(true); return; }
+    // Timing check: reject submissions under 3 seconds (bot-speed)
+    if (Date.now() - formLoadTime < 3000) { setSent(true); return; }
     setSending(true);
     setSendError('');
     try {
@@ -113,6 +119,7 @@ export default function ReportScreen({ analysis, formData, onGradeColleague }: P
           linkedinUrl: formData.linkedinUrl,
           profileText: formData.profileText,
           analysis,
+          _hp: honey ?? '',
         }),
       });
       if (!res.ok) throw new Error('Send failed');
@@ -134,7 +141,7 @@ export default function ReportScreen({ analysis, formData, onGradeColleague }: P
         {/* Report nav */}
         <div className="report-nav">
           <div className="report-nav-brand">ЯEBEL TECHNOLOGIST</div>
-          <div className="report-nav-title">Superhuman Report — {analysis.detected_name || formData.name}</div>
+          <div className="report-nav-title">Superhuman Report: {analysis.detected_name || formData.name}</div>
           <button className="btn-ghost" onClick={() => setShareOpen(true)}>Share My Score</button>
         </div>
 
@@ -277,9 +284,9 @@ export default function ReportScreen({ analysis, formData, onGradeColleague }: P
                     <div>
                       <div className="tier-label" style={{ color: cfg.color }}>{cfg.label}</div>
                       <div className="tier-description">
-                        {tier === 'mundane'  && 'High-volume, repetitive, low-judgment work — automate this first.'}
+                        {tier === 'mundane'  && 'High-volume, repetitive, low-judgment work. Automate this first.'}
                         {tier === 'mediocre' && 'AI-assistable tasks that still benefit from your direction.'}
-                        {tier === 'core'     && 'Your highest-value work. AI amplifies this — it does not replace it.'}
+                        {tier === 'core'     && 'Your highest-value work. AI amplifies this. It does not replace it.'}
                       </div>
                     </div>
                     <div>
@@ -349,6 +356,15 @@ export default function ReportScreen({ analysis, formData, onGradeColleague }: P
                     onChange={e => setEmailName(e.target.value)} />
                   <input type="email" placeholder="Your email address" value={emailAddr}
                     onChange={e => setEmailAddr(e.target.value)} required />
+                  {/* Honeypot — hidden from real users, bots fill it automatically */}
+                  <input
+                    type="text"
+                    name="_hp_website"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    aria-hidden="true"
+                    style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none' }}
+                  />
                   <button type="submit" className="email-send-btn" disabled={sending}>
                     {sending ? 'Sending...' : 'Send My Report →'}
                   </button>

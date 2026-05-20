@@ -8,7 +8,7 @@ import type { SuperhumanAnalysis } from './types';
 const GREEN  = '#47F061';
 const NAVY   = '#1C0A33';
 const WHITE  = '#FFFFFF';
-const DIM    = '#8B7FAB';
+const DIM    = '#FFFFFF';
 const CARD   = '#2A1647';
 const BORDER = '#3D2560';
 const AMBER  = '#F5C842';
@@ -112,9 +112,9 @@ const DIM_CONFIG: { key: string; label: string; max: number }[] = [
 const TIER_COLORS: Record<string, string> = { mundane: GREEN, mediocre: AMBER, core: WHITE };
 const TIER_BG:     Record<string, string> = { mundane: '#0C2B10', mediocre: '#302900', core: '#25203A' };
 const TIER_LABELS: Record<string, string> = {
-  mundane:  'TIER 1 — MUNDANE',
-  mediocre: 'TIER 2 — MEDIOCRE',
-  core:     'TIER 3 — CORE',
+  mundane:  'TIER 1: MUNDANE',
+  mediocre: 'TIER 2: MEDIOCRE',
+  core:     'TIER 3: CORE',
 };
 
 export async function generateReportPdf(analysis: SuperhumanAnalysis, name: string): Promise<Buffer> {
@@ -223,76 +223,86 @@ export async function generateReportPdf(analysis: SuperhumanAnalysis, name: stri
     ),
 
     // ════════════════════════════════════════════════
-    //  PAGE 3 — Task Stack Analysis (full detail)
+    //  PAGE 3 — Task Stack Analysis (conditional: only render if tiers have content)
     // ════════════════════════════════════════════════
-    E(Page, { size: 'A4', style: s.page },
-      hdr('YOUR TASK STACK ANALYSIS'),
-      E(View, { style: s.body },
-        E(Text, { style: s.pageTitle }, 'BEFORE AND AFTER YOUR SUPERHUMAN STACK'),
+    ...((() => {
+      const hasTierContent = tiers.some(tier => {
+        const t = a.task_tiers?.[tier];
+        return t && t.tasks && t.tasks.length > 0;
+      });
+      if (!hasTierContent) return [];
+      return [E(Page, { size: 'A4', style: s.page },
+        hdr('YOUR TASK STACK ANALYSIS'),
+        E(View, { style: s.body },
+          E(Text, { style: s.pageTitle }, 'BEFORE AND AFTER YOUR SUPERHUMAN STACK'),
 
-        ...tiers.map(tier => {
-          const t = a.task_tiers[tier];
-          if (!t) return null;
-          const colour = TIER_COLORS[tier];
-          const bg     = TIER_BG[tier];
-          return E(View, { key: tier, style: s.tierSection },
-            // Tier header row: badge + metric
-            E(View, { style: s.tierHeader },
-              E(View, { style: [s.tierBadge, { backgroundColor: bg }] },
-                E(Text, { style: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: colour, letterSpacing: 1.5 } },
-                  TIER_LABELS[tier])
-              ),
-              E(View, { style: { marginLeft: 'auto', alignItems: 'flex-end' } },
-                E(Text, { style: [s.tierMetric, { color: colour }] }, t.metric_value),
-                E(Text, { style: s.tierMetaLbl }, t.metric_label)
-              )
-            ),
-            // Task cards
-            ...t.tasks.map((task, i) =>
-              E(View, { key: i, style: s.taskCard, wrap: false },
-                E(Text, { style: s.taskCurrent }, 'Currently: ' + task.current_text),
-                E(Text, { style: { fontSize: 7.5, color: DIM, marginBottom: 6 } }, task.current_sub),
-                E(Text, { style: s.taskArrow }, 'Superhuman: ' + task.superhuman_action),
-                E(View, { style: s.taskToolsRow },
-                  ...task.tools.map((tool, ti) =>
-                    E(Text, { key: ti, style: s.taskToolTag }, tool)
-                  )
+          ...tiers.map(tier => {
+            const t = a.task_tiers?.[tier];
+            if (!t || !t.tasks || t.tasks.length === 0) return null;
+            const colour = TIER_COLORS[tier];
+            const bg     = TIER_BG[tier];
+            return E(View, { key: tier, style: s.tierSection },
+              // Tier header row: badge + metric
+              E(View, { style: s.tierHeader },
+                E(View, { style: [s.tierBadge, { backgroundColor: bg }] },
+                  E(Text, { style: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: colour, letterSpacing: 1.5 } },
+                    TIER_LABELS[tier])
                 ),
-                E(Text, { style: s.taskTry }, 'Try this: ' + task.try_this)
+                E(View, { style: { marginLeft: 'auto', alignItems: 'flex-end' } },
+                  E(Text, { style: [s.tierMetric, { color: colour }] }, t.metric_value),
+                  E(Text, { style: s.tierMetaLbl }, t.metric_label)
+                )
+              ),
+              // Task cards
+              ...t.tasks.map((task, i) =>
+                E(View, { key: i, style: s.taskCard, wrap: false },
+                  E(Text, { style: s.taskCurrent }, 'Currently: ' + task.current_text),
+                  E(Text, { style: { fontSize: 7.5, color: DIM, marginBottom: 6 } }, task.current_sub),
+                  E(Text, { style: s.taskArrow }, 'Superhuman: ' + task.superhuman_action),
+                  E(View, { style: s.taskToolsRow },
+                    ...task.tools.map((tool, ti) =>
+                      E(Text, { key: ti, style: s.taskToolTag }, tool)
+                    )
+                  ),
+                  E(Text, { style: s.taskTry }, 'Try this: ' + task.try_this)
+                )
               )
-            )
-          );
-        }).filter(Boolean)
-      ),
-      ftr('amisuperhuman.com  |  RebelTechnologist', displayName + '  |  ' + a.detected_role)
-    ),
+            );
+          }).filter(Boolean)
+        ),
+        ftr('amisuperhuman.com  |  RebelTechnologist', displayName + '  |  ' + a.detected_role)
+      )];
+    })()),
 
     // ════════════════════════════════════════════════
-    //  PAGE 4 — 3-Step Action Plan
+    //  PAGE 4 — 3-Step Action Plan (conditional: only render if steps exist)
     // ════════════════════════════════════════════════
-    E(Page, { size: 'A4', style: s.page },
-      hdr('YOUR ACTION PLAN'),
-      E(View, { style: s.body },
-        E(Text, { style: s.pageTitle }, 'YOUR 3-STEP SUPERHUMAN PLAN'),
+    ...((() => {
+      if (!a.action_plan || a.action_plan.length === 0) return [];
+      return [E(Page, { size: 'A4', style: s.page },
+        hdr('YOUR ACTION PLAN'),
+        E(View, { style: s.body },
+          E(Text, { style: s.pageTitle }, 'YOUR 3-STEP SUPERHUMAN PLAN'),
 
-        ...a.action_plan.map(step =>
-          E(View, { key: step.step, style: s.stepCard, wrap: false },
-            E(View, { style: s.stepHeader },
-              E(Text, { style: s.stepNum }, 'STEP ' + step.step),
-              E(Text, { style: s.stepTime }, step.time_frame.toUpperCase())
-            ),
-            E(Text, { style: s.stepTitle }, step.title),
-            E(Text, { style: s.stepBody }, step.body),
-            E(View, { style: s.stepTools },
-              ...step.tools.map((tool, i) =>
-                E(Text, { key: i, style: s.toolTag }, tool)
+          ...a.action_plan.map(step =>
+            E(View, { key: step.step, style: s.stepCard, wrap: false },
+              E(View, { style: s.stepHeader },
+                E(Text, { style: s.stepNum }, 'STEP ' + step.step),
+                E(Text, { style: s.stepTime }, step.time_frame.toUpperCase())
+              ),
+              E(Text, { style: s.stepTitle }, step.title),
+              E(Text, { style: s.stepBody }, step.body),
+              E(View, { style: s.stepTools },
+                ...step.tools.map((tool, i) =>
+                  E(Text, { key: i, style: s.toolTag }, tool)
+                )
               )
             )
           )
-        )
-      ),
-      ftr('amisuperhuman.com  |  RebelTechnologist', 'Score: ' + a.overall_score + '/100  |  ' + a.percentile_label)
-    )
+        ),
+        ftr('amisuperhuman.com  |  RebelTechnologist', 'Score: ' + a.overall_score + '/100  |  ' + a.percentile_label)
+      )];
+    })())
   );
 
   return renderToBuffer(doc) as Promise<Buffer>;
