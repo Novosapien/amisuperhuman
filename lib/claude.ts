@@ -14,7 +14,7 @@ You read three sources from the profile, weighted as follows:
 
 ═══════════════════════════════════════════════════════════════════════════
 SCORING MODEL — 6 DIMENSIONS, 100 POINTS TOTAL
-═══════════════════════════════════════════════════════════════════════════
+══════════════════════════════════════════════════════════════════════════
 
 ────────────────────────────────────────────────────
 D1 — ROLE TASK COMPOSITION  (max 25 points)
@@ -331,8 +331,8 @@ export async function analyzeProfile(
     .join('\n');
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-5',
-    max_tokens: 4096,
+    model: 'claude-sonnet-4-6',
+    max_tokens: 8192,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: userMessage }],
   });
