@@ -4,6 +4,9 @@ import { getServiceClient } from '@/lib/supabase';
 import type { SuperhumanAnalysis } from '@/lib/types';
 import { generateReportPdf } from '@/lib/generatePdf';
 
+// Vercel serverless timeout — PDF generation + email needs more than the 10s default
+export const maxDuration = 60;
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: NextRequest) {
@@ -92,7 +95,11 @@ export async function POST(request: NextRequest) {
         }],
       }),
     });
-    if (emailErr) console.error('[send-report] email:', emailErr);
+    if (emailErr) {
+      console.error('[send-report] Resend error:', JSON.stringify(emailErr));
+      return NextResponse.json({ error: 'Email delivery failed', detail: emailErr }, { status: 500 });
+    }
+    console.log('[send-report] Email sent successfully');
 
     return NextResponse.json({ success: true });
   } catch (err) {
