@@ -14,15 +14,15 @@ export default function LandingScreen({ onSubmit, initialName = '' }: Props) {
 
   // Register global Turnstile callback
   useEffect(() => {
-    (window as Record<string, unknown>)['onTurnstileSuccess'] = (token: string) => {
+    (window as unknown as Record<string, unknown>)['onTurnstileSuccess'] = (token: string) => {
       setTurnstileToken(token);
     };
-    (window as Record<string, unknown>)['onTurnstileExpire'] = () => {
+    (window as unknown as Record<string, unknown>)['onTurnstileExpire'] = () => {
       setTurnstileToken('');
     };
     return () => {
-      delete (window as Record<string, unknown>)['onTurnstileSuccess'];
-      delete (window as Record<string, unknown>)['onTurnstileExpire'];
+      delete (window as unknown as Record<string, unknown>)['onTurnstileSuccess'];
+      delete (window as unknown as Record<string, unknown>)['onTurnstileExpire'];
     };
   }, []);
 
