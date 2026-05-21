@@ -123,7 +123,22 @@ function formatEnrichLayerProfile(p: Record<string, unknown>): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { linkedinUrl, name } = body as { linkedinUrl: string; name?: string };
+    const { linkedinUrl, name, turnstileToken } = body as { linkedinUrl: string; name?: string; turnstileToken?: string };
+
+    // ── Turnstile verification ────────────────────────────────────────────────
+    const secret = process.env.TURNSTILE_SECRET_KEY || '1x0000000000000000000000000000000AA';
+    if (turnstileToken) {
+      const verify = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret, response: turnstileToken }),
+      });
+      const result = await verify.json() as { success: boolean };
+      if (!result.success) {
+        console.warn('[analyze] Turnstile verification failed');
+        return NextResponse.json({ error: 'Security check failed. Please refresh and try again.' }, { status: 400 });
+      }
+    }
 
     if (!linkedinUrl || !linkedinUrl.includes('linkedin.com/in/')) {
       return NextResponse.json(

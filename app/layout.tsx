@@ -37,6 +37,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             gtag('config', 'G-VHL22LXLGY');
           `}
         </Script>
+        {/* Cloudflare Turnstile */}
+        <Script
+          src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+          strategy="afterInteractive"
+          async
+          defer
+        />
       </head>
       <body>{children}</body>
     </html>

@@ -253,8 +253,8 @@ export async function generateReportPdf(analysis: SuperhumanAnalysis, name: stri
                 )
               ),
               // Task cards
-              ...t.tasks.map((task, i) =>
-                E(View, { key: i, style: s.taskCard, wrap: false },
+              ...t.tasks.slice(0, 1).map((task, i) =>
+                E(View, { key: i, style: s.taskCard },
                   E(Text, { style: s.taskCurrent }, 'Currently: ' + task.current_text),
                   E(Text, { style: { fontSize: 7.5, color: DIM, marginBottom: 6 } }, task.current_sub),
                   E(Text, { style: s.taskArrow }, 'Superhuman: ' + task.superhuman_action),
@@ -283,8 +283,8 @@ export async function generateReportPdf(analysis: SuperhumanAnalysis, name: stri
         E(View, { style: s.body },
           E(Text, { style: s.pageTitle }, 'YOUR 3-STEP SUPERHUMAN PLAN'),
 
-          ...a.action_plan.map(step =>
-            E(View, { key: step.step, style: s.stepCard, wrap: false },
+          ...a.action_plan.slice(0, 3).map(step =>
+            E(View, { key: step.step, style: s.stepCard },
               E(View, { style: s.stepHeader },
                 E(Text, { style: s.stepNum }, 'STEP ' + step.step),
                 E(Text, { style: s.stepTime }, step.time_frame.toUpperCase())

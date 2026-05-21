@@ -1,8 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Props {
-  onSubmit: (data: { name: string; linkedinUrl: string; profileText: string }) => void;
+  onSubmit: (data: { name: string; linkedinUrl: string; profileText: string; turnstileToken: string }) => void;
   initialName?: string;
 }
 
@@ -10,6 +10,21 @@ export default function LandingScreen({ onSubmit, initialName = '' }: Props) {
   const [name, setName] = useState(initialName);
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [error, setError] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
+
+  // Register global Turnstile callback
+  useEffect(() => {
+    (window as Record<string, unknown>)['onTurnstileSuccess'] = (token: string) => {
+      setTurnstileToken(token);
+    };
+    (window as Record<string, unknown>)['onTurnstileExpire'] = () => {
+      setTurnstileToken('');
+    };
+    return () => {
+      delete (window as Record<string, unknown>)['onTurnstileSuccess'];
+      delete (window as Record<string, unknown>)['onTurnstileExpire'];
+    };
+  }, []);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -17,10 +32,15 @@ export default function LandingScreen({ onSubmit, initialName = '' }: Props) {
       setError('Please enter a valid LinkedIn profile URL, e.g. linkedin.com/in/yourname');
       return;
     }
+    if (!turnstileToken) {
+      setError('Please complete the security check before submitting.');
+      return;
+    }
     setError('');
-    // profileText is empty — the API will fetch it via Proxycurl
-    onSubmit({ name, linkedinUrl: linkedinUrl.trim(), profileText: '' });
+    onSubmit({ name, linkedinUrl: linkedinUrl.trim(), profileText: '', turnstileToken });
   }
+
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA';
 
   return (
     <div id="screen-landing" className="screen active">
@@ -143,6 +163,17 @@ export default function LandingScreen({ onSubmit, initialName = '' }: Props) {
               Make sure your LinkedIn profile is set to <strong style={{color:'var(--white)'}}>public</strong> so we can read it.{' '}
               <a href="https://www.linkedin.com/help/linkedin/answer/a522735" target="_blank" rel="noreferrer">How to make your profile public →</a>
             </div>
+          </div>
+
+          {/* Cloudflare Turnstile widget */}
+          <div className="form-group">
+            <div
+              className="cf-turnstile"
+              data-sitekey={siteKey}
+              data-theme="dark"
+              data-callback="onTurnstileSuccess"
+              data-expired-callback="onTurnstileExpire"
+            />
           </div>
 
           {error && (
