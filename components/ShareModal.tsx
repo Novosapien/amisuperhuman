@@ -15,10 +15,30 @@ export default function ShareModal({ isOpen, onClose, score, percentileLabel, on
   if (!isOpen) return null;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://amisuperhuman.com';
-  const shareText = `I just scored ${score}/100 on the @RebelTechnologist Superhuman Index: ${percentileLabel}. Are you Superhuman?`;
+
+  // Rich share text — used for copy-to-clipboard, X/Twitter, and LinkedIn summary
+  const shareText = `I just got my official Superhuman Score: ${score}/100 — ${percentileLabel} of all profiles graded on the RebelTechnologist Superhuman Index.\n\nAI is moving fast. The question isn't whether your job changes — it's whether you change first.\n\nFind out if you're Superhuman 👇`;
+
+  // LinkedIn: use shareArticle which pre-populates the post body
+  const linkedInUrl =
+    `https://www.linkedin.com/shareArticle?mini=true` +
+    `&url=${encodeURIComponent(appUrl)}` +
+    `&title=${encodeURIComponent(`I scored ${score}/100 on the Superhuman Index`)}` +
+    `&summary=${encodeURIComponent(shareText)}` +
+    `&source=${encodeURIComponent('RebelTechnologist')}`;
+
+  // X/Twitter: intent/tweet pre-populates body
+  const twitterText = `I scored ${score}/100 on the @RebelTechnologist Superhuman Index — ${percentileLabel} of all profiles graded.\n\nAre you Superhuman? Find out 👇`;
+  const twitterUrl =
+    `https://twitter.com/intent/tweet` +
+    `?text=${encodeURIComponent(twitterText)}` +
+    `&url=${encodeURIComponent(appUrl)}`;
+
+  // Copy-to-clipboard includes a clean full message + URL
+  const clipboardText = `${shareText}\n\n${appUrl}`;
 
   function handleCopy() {
-    navigator.clipboard.writeText(`${shareText} ${appUrl}`).then(() => {
+    navigator.clipboard.writeText(clipboardText).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     });
@@ -88,7 +108,7 @@ export default function ShareModal({ isOpen, onClose, score, percentileLabel, on
           </button>
           <a
             className="share-btn share-btn-linkedin"
-            href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(appUrl)}&summary=${encodeURIComponent(shareText)}`}
+            href={linkedInUrl}
             target="_blank" rel="noreferrer"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
@@ -96,7 +116,7 @@ export default function ShareModal({ isOpen, onClose, score, percentileLabel, on
           </a>
           <a
             className="share-btn share-btn-twitter"
-            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText + ' →')}&url=${encodeURIComponent(appUrl)}`}
+            href={twitterUrl}
             target="_blank" rel="noreferrer"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
