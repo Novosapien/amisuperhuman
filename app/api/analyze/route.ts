@@ -128,15 +128,28 @@ export async function POST(request: NextRequest) {
     // ── Turnstile verification ────────────────────────────────────────────────
     const secret = process.env.TURNSTILE_SECRET_KEY || '1x0000000000000000000000000000000AA';
     if (turnstileToken) {
+      // Use form-encoded body — more reliable across Cloudflare environments than JSON
+      const formData = new URLSearchParams();
+      formData.append('secret', secret);
+      formData.append('response', turnstileToken);
+      const remoteIp = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? '';
+      if (remoteIp) formData.append('remoteip', remoteIp.split(',')[0].trim());
+
       const verify = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret, response: turnstileToken }),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString(),
       });
-      const result = await verify.json() as { success: boolean };
+      const result = await verify.json() as { success: boolean; 'error-codes'?: string[] };
+      const errorCodes = result['error-codes'] ?? [];
+      console.log('[analyze] Turnstile result:', result.success, errorCodes);
       if (!result.success) {
-        console.warn('[analyze] Turnstile verification failed');
-        return NextResponse.json({ error: 'Security check failed. Please refresh and try again.' }, { status: 400 });
+        // timeout-or-duplicate means the token was already used or expired
+        const isExpired = errorCodes.includes('timeout-or-duplicate');
+        const msg = isExpired
+          ? 'Security check expired. Please wait a moment and try again.'
+          : 'Security check failed. Please refresh and try again.';
+        return NextResponse.json({ error: msg }, { status: 400 });
       }
     }
 

@@ -12,17 +12,24 @@ export default function LandingScreen({ onSubmit, initialName = '' }: Props) {
   const [error, setError] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
 
-  // Register global Turnstile callback
+  // Register global Turnstile callbacks
   useEffect(() => {
-    (window as unknown as Record<string, unknown>)['onTurnstileSuccess'] = (token: string) => {
+    const w = window as unknown as Record<string, unknown>;
+    w['onTurnstileSuccess'] = (token: string) => {
       setTurnstileToken(token);
+      setError(''); // clear any previous security error on fresh token
     };
-    (window as unknown as Record<string, unknown>)['onTurnstileExpire'] = () => {
+    w['onTurnstileExpire'] = () => {
       setTurnstileToken('');
     };
+    w['onTurnstileError'] = () => {
+      setTurnstileToken('');
+      // widget will auto-retry — no need to show an error yet
+    };
     return () => {
-      delete (window as unknown as Record<string, unknown>)['onTurnstileSuccess'];
-      delete (window as unknown as Record<string, unknown>)['onTurnstileExpire'];
+      delete w['onTurnstileSuccess'];
+      delete w['onTurnstileExpire'];
+      delete w['onTurnstileError'];
     };
   }, []);
 
@@ -173,6 +180,10 @@ export default function LandingScreen({ onSubmit, initialName = '' }: Props) {
               data-theme="dark"
               data-callback="onTurnstileSuccess"
               data-expired-callback="onTurnstileExpire"
+              data-error-callback="onTurnstileError"
+              data-refresh-expired="auto"
+              data-retry="auto"
+              data-retry-interval="8000"
             />
           </div>
 
