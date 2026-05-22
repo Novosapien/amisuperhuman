@@ -7,7 +7,7 @@ import type { SuperhumanAnalysis } from '@/lib/types';
 
 type Screen = 'landing' | 'processing' | 'report';
 
-const MIN_PROCESSING_MS = 4000;
+const MIN_PROCESSING_MS = 4000; // Always show processing for at least 4s for UX
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>('landing');
@@ -15,7 +15,7 @@ export default function Home() {
   const [formData, setFormData] = useState({ name: '', linkedinUrl: '', profileText: '' });
   const [error, setError] = useState('');
 
-  async function handleSubmit(data: { name: string; linkedinUrl: string; profileText: string; turnstileToken: string }) {
+  async function handleSubmit(data: { name: string; linkedinUrl: string; profileText: string }) {
     setFormData(data);
     setScreen('processing');
     setError('');
@@ -32,6 +32,7 @@ export default function Home() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'Analysis failed');
 
+      // Ensure minimum processing display time
       const elapsed = Date.now() - startTime;
       const remaining = MIN_PROCESSING_MS - elapsed;
       if (remaining > 0) await new Promise(r => setTimeout(r, remaining));

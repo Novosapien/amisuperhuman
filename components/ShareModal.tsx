@@ -15,7 +15,7 @@ export default function ShareModal({ isOpen, onClose, score, percentileLabel, on
   if (!isOpen) return null;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://amisuperhuman.com';
-  const shareText = `I just scored ${score}/100 on the @RebelTechnologist Superhuman Index: ${percentileLabel}. Are you Superhuman?`;
+  const shareText = `I just scored ${score}/100 on the @RebelTechnologist Superhuman Index — ${percentileLabel}. Are you Superhuman?`;
 
   function handleCopy() {
     navigator.clipboard.writeText(`${shareText} ${appUrl}`).then(() => {
@@ -73,7 +73,7 @@ export default function ShareModal({ isOpen, onClose, score, percentileLabel, on
             </div>
           </div>
           <div className="share-card-footer">
-            <div className="share-card-tag">Superhuman Index: {new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</div>
+            <div className="share-card-tag">Superhuman Index — {new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</div>
             <div className="share-card-month">RebelTechnologist.com</div>
           </div>
         </div>
